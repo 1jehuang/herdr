@@ -1738,6 +1738,112 @@ command = ["cmd.exe", "/d", "/c", "slot.cmd", "default"]
         }
     }
 
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn plugin_launch_survives_executable_replacement() {
+        const CHILD_ROOT: &str = "HERDR_TEST_PLUGIN_REPLACEMENT_ROOT";
+        if let Some(root) = std::env::var_os(CHILD_ROOT) {
+            let root = std::path::PathBuf::from(root);
+            let executable = std::env::current_exe().unwrap();
+            let replacement = root.join("replacement");
+            std::fs::copy(&executable, &replacement).unwrap();
+            std::fs::rename(&replacement, &executable).unwrap();
+            assert!(!std::env::current_exe().unwrap().exists());
+
+            let mut app = test_app();
+            app.state.workspaces = vec![crate::workspace::Workspace::test_new("plugin-update")];
+            app.state.ensure_test_terminals();
+            app.state.active = Some(0);
+            app.state.selected = 0;
+            app.state.mode = crate::app::Mode::Terminal;
+            let plugin_root = root.join("plugin");
+            write_manifest_content(
+                &plugin_root,
+                r#"
+id = "example.update"
+name = "Update Probe"
+version = "0.1.0"
+min_herdr_version = "0.6.10"
+platforms = ["linux"]
+
+[[actions]]
+id = "probe"
+title = "Probe executable"
+command = ["sh", "-c", '"$HERDR_BIN_PATH" --list >/dev/null; printf "%s\n" "$?" > action-status']
+
+[[panes]]
+id = "probe"
+title = "Probe executable"
+command = ["sh", "-c", '"$HERDR_BIN_PATH" --list >/dev/null; printf "%s\n" "$?" > pane-status']
+"#,
+            );
+            link_manifest(&mut app, &plugin_root);
+            app.invoke_plugin_action_from_keybind("example.update.probe".into(), None)
+                .unwrap();
+            let action_status = read_capture_when_ready(&plugin_root.join("action-status"), || {
+                app.drain_all_internal_events();
+            });
+            let open = app.handle_api_request(Request {
+                id: "update-pane".into(),
+                method: Method::PluginPaneOpen(PluginPaneOpenParams {
+                    plugin_id: "example.update".into(),
+                    entrypoint: "probe".into(),
+                    placement: Some(PluginPanePlacement::Overlay),
+                    width: None,
+                    height: None,
+                    workspace_id: None,
+                    target_pane_id: None,
+                    direction: None,
+                    cwd: None,
+                    focus: true,
+                    env: std::collections::HashMap::new(),
+                }),
+            });
+            assert!(matches!(
+                response_result(&open),
+                ResponseResult::PluginPaneOpened { .. }
+            ));
+            let pane_status = read_capture_when_ready(&plugin_root.join("pane-status"), || {});
+            for (_, runtime) in app.terminal_runtimes.drain() {
+                runtime.shutdown();
+            }
+            assert_eq!(
+                (action_status.trim(), pane_status.trim()),
+                ("0", "0"),
+                "plugin action and pane must launch Herdr after its executable is replaced"
+            );
+            return;
+        }
+
+        let root = std::path::PathBuf::from("/var/tmp").join(format!(
+            "herdr-plugin-update-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let executable = root.join("herdr test");
+        std::fs::copy(std::env::current_exe().unwrap(), &executable).unwrap();
+        let result = std::process::Command::new(&executable)
+            .args([
+                "--exact",
+                "app::api::plugins::tests::plugin_launch_survives_executable_replacement",
+                "--nocapture",
+            ])
+            .env(CHILD_ROOT, &root)
+            .output();
+        std::fs::remove_dir_all(&root).unwrap();
+        let output = result.unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
     #[cfg(unix)]
     #[tokio::test]
     async fn plugin_pane_open_uses_plugin_root_title_env_and_target_context() {

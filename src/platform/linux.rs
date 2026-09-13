@@ -82,6 +82,26 @@ struct ProcGroupMember {
     state: char,
 }
 
+pub(crate) fn launch_executable() -> std::io::Result<PathBuf> {
+    use std::os::unix::ffi::OsStrExt;
+
+    let executable = std::env::current_exe()?;
+    if !executable.is_file() {
+        // Linux marks the old inode as deleted after an update replaces the binary.
+        if let Some(path) = executable
+            .as_os_str()
+            .as_bytes()
+            .strip_suffix(b" (deleted)")
+        {
+            let replacement = PathBuf::from(std::ffi::OsStr::from_bytes(path));
+            if replacement.is_file() {
+                return Ok(replacement);
+            }
+        }
+    }
+    Ok(executable)
+}
+
 pub fn raise_server_nofile_limit() {}
 
 pub(crate) fn should_draw_host_cursor_by_default() -> bool {
