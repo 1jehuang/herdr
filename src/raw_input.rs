@@ -1535,6 +1535,11 @@ mod tests {
             (b"\x1b[57423;1u", KeyCode::Home, KeyModifiers::empty()),
             (b"\x1bOq", KeyCode::Char('1'), KeyModifiers::empty()),
             (b"\x1b[14~", KeyCode::F(4), KeyModifiers::empty()),
+            (b"\x1b[57364;1u", KeyCode::F(1), KeyModifiers::empty()),
+            (b"\x1b[57366;1u", KeyCode::F(3), KeyModifiers::empty()),
+            (b"\x1b[57366;2u", KeyCode::F(3), KeyModifiers::SHIFT),
+            (b"\x1b[57375;1u", KeyCode::F(12), KeyModifiers::empty()),
+            (b"\x1b[57376;1u", KeyCode::F(13), KeyModifiers::empty()),
             (b"\x1b[49:33;2:1u", KeyCode::Char('1'), KeyModifiers::SHIFT),
         ];
 
