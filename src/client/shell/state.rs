@@ -372,8 +372,7 @@ pub(super) enum ClientRenameTarget {
 #[derive(Debug)]
 pub(super) struct ClientRenameOverlay {
     pub(super) title: &'static str,
-    pub(super) input: String,
-    pub(super) replace_on_type: bool,
+    pub(super) input: TextEditor,
     pub(super) target: ClientRenameTarget,
 }
 
@@ -417,7 +416,7 @@ pub(super) struct ClientNavigatorRow {
 
 #[derive(Debug)]
 pub(super) struct ClientNavigatorOverlay {
-    pub(super) query: String,
+    pub(super) query: TextEditor,
     pub(super) search_focused: bool,
     pub(super) selected: Option<ClientNavigatorTarget>,
     pub(super) scroll: usize,
@@ -427,7 +426,7 @@ pub(super) struct ClientNavigatorOverlay {
 
 #[derive(Debug)]
 pub(super) struct ClientHelpOverlay {
-    pub(super) query: String,
+    pub(super) query: TextEditor,
     pub(super) search_focused: bool,
     pub(super) scroll: usize,
 }
@@ -482,9 +481,8 @@ pub(super) struct ClientSettingsOverlay {
 pub(super) struct ClientWorktreeCreateOverlay {
     pub(super) source_workspace_id: String,
     pub(super) repo_name: String,
-    pub(super) branch: String,
+    pub(super) branch: TextEditor,
     pub(super) checkout_path: String,
-    pub(super) replace_on_type: bool,
     pub(super) error: Option<String>,
     pub(super) creating: bool,
 }
@@ -532,7 +530,7 @@ pub(super) struct ClientWorktreeOpenOverlay {
     pub(super) source_workspace_id: String,
     pub(super) entries: Vec<ClientWorktreeOpenEntry>,
     pub(super) selected: usize,
-    pub(super) query: String,
+    pub(super) query: TextEditor,
     pub(super) search_focused: bool,
     pub(super) error: Option<String>,
     pub(super) opening: bool,
@@ -850,7 +848,7 @@ pub(super) enum ClientCopySelection {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct ClientCopySearchPrompt {
     pub(super) direction: crate::api::schema::PaneCopySearchDirection,
-    pub(super) query: String,
+    pub(super) query: TextEditor,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
