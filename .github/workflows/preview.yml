@@ -128,7 +128,9 @@ jobs:
 
       - name: Run checks
         if: steps.plan.outputs.should_publish == 'true'
-        run: just check
+        run: |
+          just ci
+          just docs-contract-test
 
   build:
     needs: preflight

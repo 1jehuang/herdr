@@ -16,6 +16,17 @@ describe("official publishing workflow boundaries", () => {
     expect(load("ci").on.pull_request).toBeDefined();
   });
 
+  test("preview checks do not require a workstation Windows SDK", () => {
+    const checks = preview.jobs.preflight.steps.find((step: any) => step.name === "Run checks");
+    expect(checks.run.trim().split("\n")).toEqual(["just ci", "just docs-contract-test"]);
+    expect(preview.jobs.build.strategy.matrix.include).toContainEqual({
+      target: "x86_64-pc-windows-msvc",
+      os: "windows-latest",
+      name: "herdr-windows-x86_64.zip",
+    });
+    expect(preview.jobs.publish.needs).toContain("build");
+  });
+
   test("each publishing job rechecks both actors before using credentials", () => {
     for (const [workflow, names] of [
       [preview, ["preflight", "publish"]],
