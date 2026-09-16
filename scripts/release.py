@@ -98,8 +98,8 @@ def validate_diff(preview: str, candidate: str, version: str | None = None) -> N
             raise ValueError(f"unpreviewed change: {path}; publish a new preview first")
         # Documentation exceptions must not turn into symlinks or submodules.
         entry = git("ls-tree", candidate, "--", path)
-        if entry and not entry.startswith("100644 blob "):
-            raise ValueError(f"release preparation must use regular files: {path}")
+        if (not entry and path in RELEASE_FILES) or (entry and not entry.startswith("100644 blob ")):
+            raise ValueError(f"release preparation must preserve regular files: {path}")
     versions = [normalized_cargo(git("show", f"{candidate}:{path}"), path)[1]
                 for path in ("Cargo.toml", "Cargo.lock")]
     if versions[0] != versions[1] or (version is not None and versions[0] != version):

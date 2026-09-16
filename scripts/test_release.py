@@ -22,6 +22,9 @@ class ReleaseTests(unittest.TestCase):
         self.put("Cargo.toml", '[package]\nname = "herdr"\nversion = "1.0.0"\n[dependencies]\nserde = "1"\n')
         self.put("Cargo.lock", 'version = 4\n[[package]]\nname = "herdr"\nversion = "1.0.0"\n[[package]]\nname = "serde"\nversion = "1.0.0"\n')
         self.put("src/main.rs", "fn main() {}\n")
+        self.put("docs/next/CHANGELOG.md", "# Changelog\n")
+        self.put("skills/herdr/SKILL.md", "Stable skill\n")
+        self.put("docs/next/website/src/content/docs/obsolete.mdx", "Old page\n")
         self.put("distribution/latest.json", json.dumps({"version": "1.0.0"}))
         self.put("scripts/release.py", "# promotion tooling\n")
         self.put(".github/workflows/release.yml", "run: python3 scripts/release.py check-tag\n")
@@ -93,6 +96,18 @@ class ReleaseTests(unittest.TestCase):
             Path("CHANGELOG.md").symlink_to("src/main.rs")
             with self.assertRaisesRegex(ValueError, "regular files"):
                 release.validate_diff(self.preview, self.commit("symlink"))
+
+    def test_required_release_files_cannot_be_deleted_but_website_pages_can(self):
+        for path in ("docs/next/CHANGELOG.md", "skills/herdr/SKILL.md"):
+            with self.subTest(path=path):
+                self.git("reset", "--hard", self.preview)
+                self.git("rm", path)
+                candidate = self.commit("delete required release file")
+                with self.assertRaisesRegex(ValueError, "regular files"):
+                    release.validate_diff(self.preview, candidate)
+        self.git("reset", "--hard", self.preview)
+        self.git("rm", "docs/next/website/src/content/docs/obsolete.mdx")
+        release.validate_diff(self.preview, self.commit("remove obsolete website page"))
 
     def test_preview_source_accepts_master_history_and_rejects_unpublished_branch(self):
         self.assertEqual(release.select_preview(self.preview), self.preview)

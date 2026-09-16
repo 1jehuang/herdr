@@ -33,6 +33,21 @@ describe("official publishing workflow boundaries", () => {
     expect(adminGate.run).not.toContain("ogulcancelik");
   });
 
+  test("release arguments are not interpolated into executable shell text", () => {
+    const input = `untrusted'\"$(echo unexpected-command)`;
+    for (const args of [
+      ["preview", input],
+      ["release-prepare", input, input],
+      ["release-publish", input, input],
+      ["release", input, input],
+    ]) {
+      const result = spawnSync("just", ["--dry-run", ...args], { encoding: "utf8" });
+      expect(result.status).toBe(0);
+      expect(result.stdout + result.stderr).not.toContain(input);
+      expect(result.stdout + result.stderr).not.toContain("unexpected-command");
+    }
+  });
+
   test.skipIf(process.platform === "win32")("admin gate permits admins and fails closed for other roles or API errors", () => {
     const dir = mkdtempSync("/var/tmp/herdr-admin-gate-");
     try {
