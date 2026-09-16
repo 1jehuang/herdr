@@ -280,9 +280,15 @@ fn set_windows_native_mouse_capture<W: io::Write>(
     Ok(())
 }
 
+#[cfg(windows)]
+fn windows_uses_vt_mouse_reporting() -> bool {
+    windows_vti_input_backend_enabled()
+        && (is_ssh_session() || crate::platform::windows_virtual_terminal_input_active())
+}
+
 pub(super) fn set_mouse_capture(enabled: bool, sgr_pixels: bool) -> io::Result<()> {
     #[cfg(windows)]
-    if is_ssh_session() && windows_vti_input_backend_enabled() {
+    if windows_uses_vt_mouse_reporting() {
         crate::terminal_modes::clear_host_mouse_reporting(&mut io::stdout())?;
         return crate::terminal_modes::set_windows_mouse_reporting(
             &mut io::stdout(),
@@ -295,11 +301,7 @@ pub(super) fn set_mouse_capture(enabled: bool, sgr_pixels: bool) -> io::Result<(
         if enabled {
             execute!(io::stdout(), EnableMouseCapture)
         } else {
-            match execute!(io::stdout(), DisableMouseCapture) {
-                Ok(()) => Ok(()),
-                Err(err) if err.to_string() == "Initial console modes not set" => Ok(()),
-                Err(err) => Err(err),
-            }
+            disable_windows_native_mouse_capture()
         }
     });
     #[cfg(not(windows))]
@@ -317,6 +319,15 @@ pub(super) fn set_mouse_capture(enabled: bool, sgr_pixels: bool) -> io::Result<(
             Ok(()) => Ok(()),
             Err(err) => Err(err),
         }
+    }
+}
+
+#[cfg(windows)]
+fn disable_windows_native_mouse_capture() -> io::Result<()> {
+    match execute!(io::stdout(), DisableMouseCapture) {
+        Ok(()) => Ok(()),
+        Err(err) if err.to_string() == "Initial console modes not set" => Ok(()),
+        Err(err) => Err(err),
     }
 }
 
@@ -367,6 +378,10 @@ fn restore_terminal_state(
     #[cfg(windows)]
     if let Some(mode) = restore_windows_input_mode {
         restore_windows_input_mode_value(mode);
+    }
+    #[cfg(windows)]
+    if !is_ssh_session() {
+        let _ = disable_windows_native_mouse_capture();
     }
 
     let restore_result = ratatui::try_restore();
