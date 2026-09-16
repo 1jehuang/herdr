@@ -92,21 +92,11 @@ impl ClientShellState {
         else {
             return false;
         };
-        if !self.endpoint_is_online(&endpoint_id) {
-            let label = self.endpoint_label(&endpoint_id).to_owned();
-            self.receive_endpoint_unavailable(format!("{label} is reconnecting"));
-            outcome.repaint = true;
-        } else if endpoint_id == self.active_endpoint_id {
-            self.push_endpoint_method(
-                crate::api::schema::Method::PaneFocus(crate::api::schema::PaneTarget { pane_id }),
-                outcome,
-            );
-        } else {
-            outcome.actions.push(ClientShellAction::ActivateEndpoint {
-                endpoint_id,
-                target: Some(ClientEndpointFocusTarget::Pane(pane_id)),
-            });
-        }
+        self.focus_or_activate(
+            endpoint_id,
+            ClientEndpointFocusTarget::Pane(pane_id),
+            outcome,
+        );
         true
     }
 

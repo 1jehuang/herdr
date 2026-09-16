@@ -150,6 +150,37 @@ fn switching_machines_preserves_aggregate_agent_scroll_and_visible_rows() {
 }
 
 #[test]
+fn local_agent_click_can_cancel_a_pending_remote_switch() {
+    for reconnecting in [false, true] {
+        let (mut state, remote) = state_with_scrollable_agents();
+        assert!(state.activate_endpoint(remote, &mut ClientShellInput::default()));
+        if reconnecting {
+            state.mark_endpoint_disconnected(&ClientEndpointId::Local);
+        }
+        state.compose(100, 28).unwrap();
+        let (rect, _, pane_id) = state
+            .hits
+            .endpoint_agents
+            .iter()
+            .find(|(_, endpoint, _)| endpoint.is_local())
+            .unwrap()
+            .clone();
+        let outcome = state.handle_raw_events(vec![RawInputEvent::Mouse(MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: rect.x + 2,
+            row: rect.y,
+            modifiers: KeyModifiers::NONE,
+        })]);
+        assert!(
+            matches!(outcome.actions.as_slice(), [ClientShellAction::ActivateEndpoint {
+            endpoint_id: ClientEndpointId::Local,
+            target: Some(ClientEndpointFocusTarget::Pane(target)),
+        }] if target == &pane_id)
+        );
+    }
+}
+
+#[test]
 fn aggregate_agent_scroll_still_clamps_when_rows_shrink_on_activation() {
     let (mut state, remote) = state_with_scrollable_agents();
     for endpoint_id in [ClientEndpointId::Local, remote.clone()] {
