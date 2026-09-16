@@ -102,6 +102,14 @@ class ChangelogScriptTests(unittest.TestCase):
         self.assertEqual(manifest["protocol"], read_protocol_version())
         self.assertEqual(manifest["notes"], "### Fixed\n- One")
 
+    def test_build_latest_json_uses_selected_release_endpoint_generation(self) -> None:
+        manifest = json.loads(build_latest_json(
+            "0.1.1", "Release notes", release_assets("0.1.1"), release_sha256(),
+            endpoint_generation=7,
+        ))
+        self.assertEqual(manifest["endpoint_generation"], 7)
+        self.assertEqual(manifest["releases"]["0.1.1"]["endpoint_generation"], 7)
+
     def test_build_latest_json_embeds_notes_and_release_assets(self) -> None:
         manifest = json.loads(
             build_latest_json(

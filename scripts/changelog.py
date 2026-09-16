@@ -317,6 +317,7 @@ def build_latest_json(
     protocol: int | None = None,
     announcement: dict[str, str] | None = None,
     releases: dict[str, Any] | None = None,
+    endpoint_generation: int | None = None,
 ) -> str:
     normalized_version = normalize_version(version)
     normalized_notes = notes.strip()
@@ -330,7 +331,8 @@ def build_latest_json(
     ordered_sha256 = normalize_sha256(sha256, "sha256")
     normalized_announcement = normalize_announcement(announcement, "root")
     archived_releases = normalize_releases(releases)
-    endpoint_generation = read_endpoint_protocol_generation()
+    if endpoint_generation is None:
+        endpoint_generation = read_endpoint_protocol_generation()
     current_metadata: dict[str, Any] = {
         "notes": normalized_notes,
         "protocol": protocol,
@@ -714,6 +716,7 @@ def cmd_sync_latest_json(args: argparse.Namespace) -> int:
         protocol=int(new_manifest["protocol"]),
         announcement=announcement,
         releases=archived_releases_from_current_manifest(current_manifest),
+        endpoint_generation=args.endpoint_generation,
     )
     write_text(manifest_path, output)
     if announcement is not None:
@@ -808,6 +811,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_latest_json.add_argument("--output", default=str(DEFAULT_LATEST_JSON_PATH))
     sync_latest_json.add_argument("--announcement", default=str(DEFAULT_PRODUCT_ANNOUNCEMENT_PATH))
     sync_latest_json.add_argument("--protocol", type=int)
+    sync_latest_json.add_argument("--endpoint-generation", type=int)
     sync_latest_json.set_defaults(func=cmd_sync_latest_json)
 
     validate_product_announcement = subparsers.add_parser(
