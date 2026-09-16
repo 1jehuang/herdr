@@ -101,6 +101,8 @@ Workspace, tab, pane IDs, and agent names are scoped to one server. Two machines
 
 Saved profiles contain only an opaque ID, label, SSH target, explicit remote session, and enabled state. Herdr does not store passwords, private keys, agent tickets, or SSH control sockets in the catalog. Authentication stays with OpenSSH.
 
+Herdr separately remembers each machine's remote OS and resolved executable path so repeated `--machine` commands can skip discovery. Existing profiles learn missing information on first use. This cache is optional: missing, invalid, or unwritable cache files do not prevent commands from working. Commands still check live server compatibility. If a cached executable is missing or no longer supports API forwarding, Herdr rediscovers it during the initial read-only check; it never automatically repeats a command that may already have changed remote state.
+
 The client and server negotiate compatibility rather than requiring identical versions. Saved-machine connections additionally need the server's `surface_interest` and `health_check` capabilities. Older servers without those capabilities show Attention until explicitly updated, even if a standalone attach works. Other missing server methods disable only their corresponding actions.
 
 Updating a compatible client does not replace the running remote server or stop its agents. When you need new server-side behavior, update that server explicitly. Normal replacement asks before stopping the server and its pane processes.
